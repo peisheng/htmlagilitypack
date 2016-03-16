@@ -11,6 +11,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Xml;
 using Microsoft.Win32;
+using System.Text.RegularExpressions;
 
 #endregion
 
@@ -1389,13 +1390,38 @@ namespace HtmlAgilityPack
                     string charset = NameValuePairList.GetNameValuePairsValue(resp.ContentType, "charset");
                     if (!string.IsNullOrEmpty(charset))
                     {
-
                         respenc = System.Text.Encoding.GetEncoding(charset);
                     }
-                     
-                    
-                }
+                    else
+                    {
+                        WebClient myWebClient = new WebClient();
+                        //创建WebClient实例myWebClient 
+                        // 需要注意的：
+                        //有的网页可能下不下来，有种种原因比如需要cookie,编码问题等等
+                        //这是就要具体问题具体分析比如在头部加入cookie 
+                       // myWebClient.Headers = req.Headers;
+                        //myWebClient.Credentials = req.Credentials;
+                        //这样可能需要一些重载方法。根据需要写就可以了
+                        //获取或设置用于对向 Internet 资源的请求进行身份验证的网络凭据。
+                        //myWebClient.Credentials = CredentialCache.DefaultCredentials;
+                        //如果服务器要验证用户名,密码 
+                        //NetworkCredential mycred = new NetworkCredential(struser, strpassword);
+                        //myWebClient.Credentials = mycred; 
+                        //从资源下载数据并返回字节数组。（加@是因为网址中间有"/"符号）
+                        byte[] myDataBuffer = myWebClient.DownloadData(req.RequestUri);
+                        string strWebData = Encoding.Default.GetString(myDataBuffer);
+                        string charSet = "utf-8";
+                        //获取网页字符编码描述信息
+                        Match charSetMatch = Regex.Match(strWebData, "<meta([^<]*)charset=([^<\"]*)\"", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                        string webCharSet = charSetMatch.Groups[2].Value; if (charSet == null || charSet == ""||charset!=webCharSet) charSet = webCharSet;
+                       // if (charSet != null && charSet != "" && Encoding.GetEncoding(charSet) != Encoding.Default)
+                            respenc= Encoding.GetEncoding(charSet);
 
+                            if (respenc == null)
+                                respenc = Encoding.Default;
+                         
+                    }
+                } 
             }
 			if (OverrideEncoding != null)
 				respenc = OverrideEncoding;
